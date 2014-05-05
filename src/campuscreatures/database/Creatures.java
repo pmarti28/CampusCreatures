@@ -26,6 +26,8 @@ public class Creatures {
 	int _moves_per_turn;
 	int _experience;
 	int _level;
+	int _seen;			//0 if not seen yet, 1 if seen
+	int _captured;		//0 if not captured, 1 if captured
 	
 	//Empty constructor
 	public Creatures(){}
@@ -33,7 +35,7 @@ public class Creatures {
 	//constructor
 	public Creatures(String name, String region, String district, String type,
 			int health, int magic, int attack, int defense, 
-			int speed, int moves_per_turn, int exp, int level) {
+			int speed, int moves_per_turn, int exp, int level, int seen, int cap) {
 		this._name = name;
 		this._region = region;
 		this._district = district;
@@ -46,12 +48,14 @@ public class Creatures {
 		this._moves_per_turn = moves_per_turn;
 		this._experience = exp;
 		this._level = level;
+		this._seen = seen;
+		this._captured = cap;
 	}
 	
 	//constructor
 	public Creatures(int id, String name, String region, String district, 
 			String type, int health, int magic, int attack, int defense, 
-			int speed, int moves_per_turn, int exp, int level) {
+			int speed, int moves_per_turn, int exp, int level, int seen, int cap) {
 		this._id = id;
 		this._name = name;
 		this._region = region;
@@ -65,6 +69,8 @@ public class Creatures {
 		this._moves_per_turn = moves_per_turn;
 		this._experience = exp;
 		this._level = level;
+		this._seen = seen;
+		this._captured = cap;
 	}
 		
 	public String toString() {
@@ -191,6 +197,23 @@ public class Creatures {
 		this._level = level;
 	}
 	
+	//seen attribute
+	public int getSeen(){
+		return this._seen;
+	}
+	public void setSeen(int seen){
+		this._seen = seen;
+	}
+	
+	//captured attribute			0=not catpured, 1 = captured
+	public int getCaptured(){
+		return this._captured;
+	}
+	public void setCaptured(int cap){
+		this._captured = cap;
+	}
+	
+	
 	public ArrayList<BattleAction> getMoveSet(Creatures creature){
 		int level = creature.getLevel();
 		String type = creature.getType();
@@ -238,175 +261,183 @@ public class Creatures {
 		BattleAction psych_3 = new BattleAction("Mind Spike",3,0,10);
 		BattleAction psych_4 = new BattleAction("Thought Sieze",4,0,10);
 		//Normal Type Abilities
-		BattleAction normal_1 = new BattleAction("Cut", 1,0,10);
-		BattleAction normal_2 = new BattleAction("Bite", 2,0,10);
-		BattleAction normal_3 = new BattleAction("Hyper Fang", 2,0,10);
-		BattleAction normal_4 = new BattleAction("Rollout", 4,0,10);
+		BattleAction normal_1 = new BattleAction("Seduce", 1,0,10);
+		BattleAction normal_2 = new BattleAction("Charm", 2,0,10);
+		BattleAction normal_3 = new BattleAction("Caress", 2,0,10);
+		BattleAction normal_4 = new BattleAction("Flatter", 4,0,10);
 		//Fire Type Abilities
 		BattleAction fire_1 = new BattleAction("Burn", 1,0,10);
 		BattleAction fire_2 = new BattleAction("Scorch", 2,0,10);
 		BattleAction fire_3 = new BattleAction("Conflagrate", 2,0,10);
 		BattleAction fire_4 = new BattleAction("Immolate", 4,0,10);
 		
-		//Assign basic three moves
-		if (level < 5){
-			move_set.add(kick_1);
-			move_set.add(heal_1);
-			move_set.add(intimidate_1);
+		if (creature.getName() == "Weazel Man"){
+			move_set.add(normal_1);
+			move_set.add(normal_2);
+			move_set.add(normal_3);
+			move_set.add(normal_4);
+			
 		}
 		else{
-			if (level < 16){
-				move_set.add(kick_2);
-				move_set.add(heal_2);
-				move_set.add(intimidate_2);
+			//Assign basic three moves
+			if (level < 5){
+				move_set.add(kick_1);
+				move_set.add(heal_1);
+				move_set.add(intimidate_1);
 			}
 			else{
-				if (level < 25){
-					move_set.add(kick_3);
-					move_set.add(heal_3);
-					move_set.add(intimidate_3);
+				if (level < 16){
+					move_set.add(kick_2);
+					move_set.add(heal_2);
+					move_set.add(intimidate_2);
 				}
 				else{
-					move_set.add(kick_4);
-					move_set.add(heal_4);
-					move_set.add(intimidate_4);
-				}
-			}
-		}
-		//Assign Psychic moves
-		if (type == "psychic"){
-			if (level < 2){
-				move_set.add(psych_1);
-			}
-			else{
-				if (level < 9){
-					move_set.add(psych_2);
-				}
-				else{
-					if (level < 21){
-						move_set.add(psych_3);
+					if (level < 25){
+						move_set.add(kick_3);
+						move_set.add(heal_3);
+						move_set.add(intimidate_3);
 					}
 					else{
-						move_set.add(psych_4);
+						move_set.add(kick_4);
+						move_set.add(heal_4);
+						move_set.add(intimidate_4);
 					}
 				}
 			}
-		}
-		//Assign Earth moves
-		if (type == "earth"){
-			if (level < 2){
-				move_set.add(earth_1);
-			}
-			else{
-				if (level < 9){
-					move_set.add(earth_2);
+			//Assign Psychic moves
+			if (type == "psychic"){
+				if (level < 2){
+					move_set.add(psych_1);
 				}
 				else{
-					if (level < 21){
-						move_set.add(earth_3);
+					if (level < 9){
+						move_set.add(psych_2);
 					}
 					else{
-						move_set.add(earth_4);
+						if (level < 21){
+							move_set.add(psych_3);
+						}
+						else{
+							move_set.add(psych_4);
+						}
 					}
 				}
 			}
-		}
-		//Assign Fire moves
-		if (type == "fire"){
-			if (level < 2){
-				move_set.add(fire_1);
-			}
-			else{
-				if (level < 9){
-					move_set.add(fire_2);
+			//Assign Earth moves
+			if (type == "earth"){
+				if (level < 2){
+					move_set.add(earth_1);
 				}
 				else{
-					if (level < 21){
-						move_set.add(fire_3);
+					if (level < 9){
+						move_set.add(earth_2);
 					}
 					else{
-						move_set.add(fire_4);
+						if (level < 21){
+							move_set.add(earth_3);
+						}
+						else{
+							move_set.add(earth_4);
+						}
 					}
 				}
 			}
-		}
-		//Assign Space moves
-		if (type == "space"){
-			if (level < 2){
-				move_set.add(space_1);
-			}
-			else{
-				if (level < 9){
-					move_set.add(space_2);
+			//Assign Fire moves
+			if (type == "fire"){
+				if (level < 2){
+					move_set.add(fire_1);
 				}
 				else{
-					if (level < 21){
-						move_set.add(space_3);
+					if (level < 9){
+						move_set.add(fire_2);
 					}
 					else{
-						move_set.add(space_4);
+						if (level < 21){
+							move_set.add(fire_3);
+						}
+						else{
+							move_set.add(fire_4);
+						}
 					}
 				}
 			}
-		}
-		//Assign Normal moves
-		if (type == "normal"){
-			if (level < 2){
-				move_set.add(normal_1);
-			}
-			else{
-				if (level < 9){
-					move_set.add(normal_2);
+			//Assign Space moves
+			if (type == "space"){
+				if (level < 2){
+					move_set.add(space_1);
 				}
 				else{
-					if (level < 21){
-						move_set.add(normal_3);
+					if (level < 9){
+						move_set.add(space_2);
 					}
 					else{
-						move_set.add(normal_4);
+						if (level < 21){
+							move_set.add(space_3);
+						}
+						else{
+							move_set.add(space_4);
+						}
 					}
 				}
 			}
-		}
-		//Assign Spirit moves
-		if (type == "spirit"){
-			if (level < 2){
-				move_set.add(spirit_1);
-			}
-			else{
-				if (level < 9){
-					move_set.add(spirit_2);
+			//Assign Normal moves
+			if (type == "normal"){
+				if (level < 2){
+					move_set.add(normal_1);
 				}
 				else{
-					if (level < 21){
-						move_set.add(spirit_3);
+					if (level < 9){
+						move_set.add(normal_2);
 					}
 					else{
-						move_set.add(spirit_4);
+						if (level < 21){
+							move_set.add(normal_3);
+						}
+						else{
+							move_set.add(normal_4);
+						}
 					}
 				}
 			}
-		}
-		//Assign Electric moves
-		if (type == "electric"){
-			if (level < 2){
-				move_set.add(shock_1);
-			}
-			else{
-				if (level < 9){
-					move_set.add(shock_2);
+			//Assign Spirit moves
+			if (type == "spirit"){
+				if (level < 2){
+					move_set.add(spirit_1);
 				}
 				else{
-					if (level < 21){
-						move_set.add(shock_3);
+					if (level < 9){
+						move_set.add(spirit_2);
 					}
 					else{
-						move_set.add(shock_4);
+						if (level < 21){
+							move_set.add(spirit_3);
+						}
+						else{
+							move_set.add(spirit_4);
+						}
+					}
+				}
+			}
+			//Assign Electric moves
+			if (type == "electric"){
+				if (level < 2){
+					move_set.add(shock_1);
+				}
+				else{
+					if (level < 9){
+						move_set.add(shock_2);
+					}
+					else{
+						if (level < 21){
+							move_set.add(shock_3);
+						}
+						else{
+							move_set.add(shock_4);
+						}
 					}
 				}
 			}
 		}
-		
 		//Return ArrayList of the moves
 		return move_set;
 	}

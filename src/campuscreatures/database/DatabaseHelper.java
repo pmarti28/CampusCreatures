@@ -3,11 +3,13 @@ package campuscreatures.database;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+
 import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.graphics.Region;
 import campuscreatures.location.LocationService;
 import android.util.Log;
 
@@ -26,6 +28,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 	private static final String DATABASE_NAME = "creature.db";
 	private static final String TABLE_CREATURES = "Creatures";
 	private static final String TABLE_PLAYER = "Player";
+	private static final String TABLE_REGIONS = "Regions";
 		
 	//Common column names (Creatures Table consist of only these column names)
 	public static final String KEY_ID = "_id";
@@ -41,12 +44,24 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 	private static final String COLUMN_MPT = "moves_per_turn";
 	private static final String COLUMN_EXPERIENCE = "experience";
 	private static final String COLUMN_LEVEL = "level";
+	private static final String COLUMN_SEEN = "seen_or_not";
+	private static final String COLUMN_CAPTURED = "captured";
 	
 	//Column names - unique to Player Table
 	private static final String PLAYER_ID = "_id";
-	private static final String COLUMN_SEEN = "seen_or_not";
-	private static final String COLUMN_SEEN_AT = "seen_at";
-	private static final String COLUMN_CAPTURED = "captured";
+	
+	//Column names - unique to Regions Table
+	private static final String ZONE_ID = "_id";
+	private static final String REGION_NAME = "name";
+	private static final String POINT_ONE_LAT = "Point1_Lat";
+	private static final String POINT_ONE_LONG = "Point1_Long";
+	private static final String POINT_TWO_LAT = "Point2_Lat";
+	private static final String POINT_TWO_LONG = "Point2_Long";
+	private static final String POINT_THREE_LAT = "Point3_Lat";
+	private static final String POINT_THREE_LONG = "Point3_Long";
+	private static final String POINT_FOUR_LAT = "Point4_Lat";
+	private static final String POINT_FOUR_LONG = "Point4_Long";
+
 	
 	private static final String CREATE_CREATURES_TABLE = "CREATE TABLE " 
 			+ TABLE_CREATURES + " (" 				
@@ -62,7 +77,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 			+ COLUMN_SPEED + " INTEGER NOT NULL, "
 			+ COLUMN_MPT + " INTEGER NOT NULL, "
 			+ COLUMN_EXPERIENCE + " INTEGER NOT NULL, "
-			+ COLUMN_LEVEL + " INTEGER NOT NULL" + ")";
+			+ COLUMN_LEVEL + " INTEGER NOT NULL, " 
+			+ COLUMN_SEEN + " INTEGER NOT NULL, "
+			+ COLUMN_CAPTURED + " INTEGER NOT NULL" + ")";
 	
 	private static final String CREATE_PLAYER_TABLE = "CREATE TABLE "
 			+ TABLE_PLAYER + " (" 				
@@ -79,10 +96,34 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 			+ COLUMN_MPT + " INTEGER NOT NULL, "
 			+ COLUMN_EXPERIENCE + " INTEGER NOT NULL, "
 			+ COLUMN_LEVEL + " INTEGER NOT NULL, " 
-			+ COLUMN_SEEN + " TEXT NOT NULL, "
-			+ COLUMN_SEEN_AT + " TEXT NOT NULL, "
-			+ COLUMN_CAPTURED + " TEXT NOT NULL" + ")";
+			+ COLUMN_SEEN + " INTEGER NOT NULL, "
+			+ COLUMN_CAPTURED + " INTEGER NOT NULL" + ")";
 	
+	private static final String CREATE_REGIONS_TABLE = "CREATE TABLE "
+			+ TABLE_REGIONS + " ("
+			+ ZONE_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+			+ REGION_NAME + " TEXT NOT NULL, "
+			+ POINT_ONE_LAT + " REAL, "
+			+ POINT_ONE_LONG + " REAL, "
+			+ POINT_TWO_LAT + " REAL, "
+			+ POINT_TWO_LONG + " REAL, "
+			+ POINT_THREE_LAT + " REAL, "
+			+ POINT_THREE_LONG + " REAL, "
+			+ POINT_FOUR_LAT + " REAL, "
+			+ POINT_FOUR_LONG + " REAL" + ")";
+	
+/*	private static final String CREATE_REGIONS_TABLE = "CREATE TABLE " 
+			+ TABLE_REGIONS + " ("
+			+ ZONE_ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
+			+ REGION_NAME + " TEXT NOT NULL, "
+			+ POINT_ONE_LAT + " STRING NOT NULL, "
+			+ POINT_ONE_LONG + " STRING NOT NULL, "
+			+ POINT_TWO_LAT + " STRING NOT NULL, "
+			+ POINT_TWO_LONG + " STRING NOT NULL, "
+			+ POINT_THREE_LAT +  " STRING NOT NULL, "
+			+ POINT_THREE_LONG + " STRING NOT NULL, "
+			+ POINT_FOUR_LAT + " STRING NOT NULL, "
+			+ POINT_FOUR_LONG + " STRING NOT NULL" + ")"; */
 	
 	// MySQLiteHelper constructor must call the super class constructor
 	public DatabaseHelper(Context context) {
@@ -94,7 +135,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 	public void onCreate(SQLiteDatabase database) {
 		Log.d("onCreate function in DatabaseHelper", "Creating DB for first time");
 		database.execSQL(CREATE_CREATURES_TABLE);
-		database.execSQL(CREATE_PLAYER_TABLE);		
+		database.execSQL(CREATE_PLAYER_TABLE);
+		database.execSQL(CREATE_REGIONS_TABLE);
 		Log.d("Created Tables onCreate:", "Creatures Table and Player Table");
 	}
 
@@ -108,18 +150,19 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 						+ newVersion + ", which will destroy all old data.");
 		database.execSQL("DROP TABLE IF EXISTS " + TABLE_CREATURES); 
 		database.execSQL("DROP TABLE IF EXISTS " + TABLE_PLAYER);
+		database.execSQL("DROP TABLE IF EXISTS " + TABLE_REGIONS);
 		onCreate(database); 
 	}
 	/**
 	 * 
-	 * Creatures Table - 13 columns
-	 * +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-	 * | ID | Name | Region | District | Type | Health | Magic | Attack | Defense | Speed | Moves Per Turn | Experience | Level |   
-	 * +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-	 * |____|______|________|__________|______|________|_______|________|_________|_______|________________|____________|_______|    
-	 * |____|______|________|__________|______|________|_______|________|_________|_______|________________|____________|_______| 
-	 * |____|______|________|__________|______|________|_______|________|_________|_______|________________|____________|_______| 
-	 * |____|______|________|__________|______|________|_______|________|_________|_______|________________|____________|_______| 
+	 * Creatures Table - 15 columns
+	 * +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+	 * | ID | Name | Region | District | Type | Health | Magic | Attack | Defense | Speed | Moves Per Turn | Experience | Level | Seen | Cap |   
+	 * +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+	 * |____|______|________|__________|______|________|_______|________|_________|_______|________________|____________|_______|______|_____|    
+	 * |____|______|________|__________|______|________|_______|________|_________|_______|________________|____________|_______|______|_____|   
+	 * |____|______|________|__________|______|________|_______|________|_________|_______|________________|____________|_______|______|_____|  
+	 * |____|______|________|__________|______|________|_______|________|_________|_______|________________|____________|_______|______|_____|  
 	 * 
 	 * All CRUD Operations (Create, Read, Update, Delete)
 	 * 
@@ -140,7 +183,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 		SQLiteDatabase database = this.getWritableDatabase();
 		
 		ContentValues values = new ContentValues();		
-		Log.d("Putting name into name column: ", creature.getName());
+		//Log.d("Putting name into name column: ", creature.getName());
 		values.put(COLUMN_NAME, creature.getName());				
 		values.put(COLUMN_REGION, creature.getRegion());			
 		values.put(COLUMN_DISTRICT, creature.getDistrict());		
@@ -152,13 +195,15 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 		values.put(COLUMN_SPEED, creature.getSpeed());				
 		values.put(COLUMN_MPT, creature.getMovesPerTurn());			
 		values.put(COLUMN_EXPERIENCE, creature.getExperience());	
-		values.put(COLUMN_LEVEL, creature.getLevel());				
+		values.put(COLUMN_LEVEL, creature.getLevel());		
+		values.put(COLUMN_SEEN, creature.getSeen());
+		values.put(COLUMN_CAPTURED, creature.getCaptured());
 		
-		Log.d("About to insert the entire row for:", creature.getName());
+		//Log.d("About to insert the entire row for:", creature.getName());
 		long creature_id = database.insert(TABLE_CREATURES, null, values);
 		
-		Log.d("Inserted the row for: ", creature.getName());
-		Log.d("KEY ID for: ", creature.getName() + " is " + creature.getId());
+		//Log.d("Inserted the row for: ", creature.getName());
+		//Log.d("KEY ID for: ", creature.getName() + " is " + creature.getId());
 		
 		return creature_id;
 		//Close database connection
@@ -199,7 +244,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 		creature.setMovesPerTurn(cursor.getInt(10));
 		creature.setExperience(cursor.getInt(11));
 		creature.setLevel(cursor.getInt(12));
-		Log.d("getCreature(" + creature_id + ")", creature.toString());
+		creature.setSeen(cursor.getInt(13));
+		creature.setCaptured(cursor.getInt(14));
+		//Log.d("getCreature(" + creature_id + ")", creature.toString());
 		return creature;
 	}
 		
@@ -216,7 +263,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 		SQLiteDatabase database = this.getReadableDatabase();
 		
 		String selectQuery = "SELECT * FROM " + TABLE_CREATURES;
-		Log.d("Logging Query for getAllCreatures", selectQuery);
+		//Log.d("Logging Query for getAllCreatures", selectQuery);
 		Cursor cursor = database.rawQuery(selectQuery, null);
 		
 		Creatures creature = null;
@@ -236,11 +283,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 				creature.setMovesPerTurn(cursor.getInt(10));
 				creature.setExperience(cursor.getInt(11));
 				creature.setLevel(cursor.getInt(12));
+				creature.setSeen(cursor.getInt(13));
+				creature.setCaptured(cursor.getInt(14));
 				creaturesList.add(creature);
-				Log.d("ID and NAME", String.valueOf(creature.getId()) + " " + creature.getName());
+				//Log.d("ID and NAME", String.valueOf(creature.getId()) + " " + creature.getName());
 			} while (cursor.moveToNext());
 		}
-		Log.d("getAllCreatures().toString() function", creaturesList.toString());
+		//Log.d("getAllCreatures().toString() function", creaturesList.toString());
 		database.close();
 		return creaturesList;		
 	}
@@ -270,7 +319,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 		
 		List<Creatures> regionCreatures = new ArrayList<Creatures>();
 		String[] resultColumns = new String[]{KEY_ID, COLUMN_NAME, COLUMN_REGION, COLUMN_DISTRICT, COLUMN_TYPE, COLUMN_HEALTH,
-				COLUMN_MAGIC, COLUMN_ATTACK, COLUMN_DEFENSE, COLUMN_SPEED, COLUMN_MPT, COLUMN_EXPERIENCE, COLUMN_LEVEL}; 
+				COLUMN_MAGIC, COLUMN_ATTACK, COLUMN_DEFENSE, COLUMN_SPEED, COLUMN_MPT, COLUMN_EXPERIENCE, COLUMN_LEVEL, 
+				COLUMN_SEEN, COLUMN_CAPTURED}; 
 		String[] condition = {region};
 		SQLiteDatabase database = this.getReadableDatabase();
 		Cursor cursor = database.query(TABLE_CREATURES, resultColumns, COLUMN_REGION + "=" + "?", condition, null, null, null);
@@ -292,6 +342,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 				creature.setMovesPerTurn(cursor.getInt(10));
 				creature.setExperience(cursor.getInt(11));
 				creature.setLevel(cursor.getInt(12));
+				creature.setSeen(cursor.getInt(13));
+				creature.setCaptured(cursor.getInt(14));
 				regionCreatures.add(creature);
 			} while (cursor.moveToNext());
 		}
@@ -300,31 +352,15 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 		return regionCreatures;
 	}
 	
-	/**
-<<<<<<< HEAD
-	 * Adam's
-	 * getLocalCreatures() - used to find creatures in a certain region and district
-	 * @param region
-	 * @param district
-	 * @return
-	 * 	1. get reference to readable Database
-	 * 	2. build the query statement, create cursor
-	 * 	3. go over each row, build creature and add it to the list
-	 * 	4. return that list
-	 */
-	
-	/**
-	* updatinCreature()
-=======
-	* updateCreature()
->>>>>>> d80ae67a70c67785c19d6684bd8cc9c090cfd39a
-	* @param creature
-	* @return
-	* 	1. get reference to writable Database
-	* 	2. create ContentValues to add key "column"/value
-	* 	3. update row using database.update(table, column/value, selections, selection arguments)
-	* 	4. return creature
-	*/
+
+/**	 updateCreature()
+ * @param creature
+ * @return
+ * 	1. get reference to writable Database
+ * 	2. create ContentValues to add key "column"/value
+ * 	3. update row using database.update(table, column/value, selections, selection arguments)
+ * 	4. return creature
+ */
 	public long updateCreature(Creatures creature){
 		
 		SQLiteDatabase database = this.getWritableDatabase();
@@ -341,7 +377,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 		values.put(COLUMN_SPEED, creature.getSpeed());		
 		values.put(COLUMN_MPT, creature.getMovesPerTurn());		
 		values.put(COLUMN_EXPERIENCE, creature.getExperience());		
-		values.put(COLUMN_LEVEL, creature.getLevel());			
+		values.put(COLUMN_LEVEL, creature.getLevel());	
+		values.put(COLUMN_SEEN, creature.getSeen());		
+		values.put(COLUMN_CAPTURED, creature.getCaptured());
 		
 		long x = database.update(TABLE_CREATURES, 				 
 				values, 										 	
@@ -370,14 +408,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 	
 	/**
 	 * 
-	 * Player Table - 16 columns
-	 * ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-	 * | ID | Name | Region | District | Type | Health | Magic | Attack | Defense | Speed | Moves Per Turn | Experience | Level | Seen | SeenAt | Captured |   
-	 * ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-	 * |____|______|________|__________|______|________|_______|________|_________|_______|________________|____________|_______|______|________|__________|    
-	 * |____|______|________|__________|______|________|_______|________|_________|_______|________________|____________|_______|______|________|__________|  
-	 * |____|______|________|__________|______|________|_______|________|_________|_______|________________|____________|_______|______|________|__________|  
-	 * |____|______|________|__________|______|________|_______|________|_________|_______|________________|____________|_______|______|________|__________|  
+	 * Player Table - 15 columns
+	 * ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+	 * | ID | Name | Region | District | Type | Health | Magic | Attack | Defense | Speed | Moves Per Turn | Experience | Level | Seen | Captured |   
+	 * ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+	 * |____|______|________|__________|______|________|_______|________|_________|_______|________________|____________|_______|______|__________|    
+	 * |____|______|________|__________|______|________|_______|________|_________|_______|________________|____________|_______|______|__________|  
+	 * |____|______|________|__________|______|________|_______|________|_________|_______|________________|____________|_______|______|__________|  
+	 * |____|______|________|__________|______|________|_______|________|_________|_______|________________|____________|_______|______|__________|  
 	 * 
 	 * All CRUD Operations (Create, Read, Update, Delete)
 	 * 
@@ -397,7 +435,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 		SQLiteDatabase database = this.getWritableDatabase(); 	
 		ContentValues playerValues = new ContentValues();
 		
-		Log.d("Putting creature name into player table's name column", playerCreature.getName());
+		//Log.d("Putting creature name into player table's name column", playerCreature.getName());
 		playerValues.put(COLUMN_NAME, playerCreature.getName());
 		playerValues.put(COLUMN_REGION, playerCreature.getRegion());			
 		playerValues.put(COLUMN_DISTRICT, playerCreature.getDistrict());		
@@ -410,14 +448,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 		playerValues.put(COLUMN_MPT, playerCreature.getMovesPerTurn());		
 		playerValues.put(COLUMN_EXPERIENCE, playerCreature.getExperience());
 		playerValues.put(COLUMN_LEVEL, playerCreature.getLevel());			
-		playerValues.put(COLUMN_SEEN, playerCreature.getSeen()=="yes");
-		playerValues.put(COLUMN_SEEN_AT, playerCreature.getRegion());
-		playerValues.put(COLUMN_CAPTURED, playerCreature.getCaptured()=="yes");
+		playerValues.put(COLUMN_SEEN, playerCreature.getSeen());
+		playerValues.put(COLUMN_CAPTURED, playerCreature.getCaptured());
 	
-		Log.d("About to insert the entire row for:", playerCreature.getName());
+		//Log.d("About to insert the entire row for:", playerCreature.getName());
 		long playerCreature_ID = database.insert(TABLE_PLAYER, null, playerValues);
-		Log.d("Inserted the row for: ", playerCreature.getName());
-		Log.d("KEY ID for: ", playerCreature.getName() + " is " + playerCreature.getId());
+		//Log.d("Inserted the row for: ", playerCreature.getName());
+		//Log.d("KEY ID for: ", playerCreature.getName() + " is " + playerCreature.getId());
 		
 		return playerCreature_ID;
 		//database.close();
@@ -456,8 +493,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 		playerCreature.setMovesPerTurn(cursor.getInt(10));
 		playerCreature.setExperience(cursor.getInt(11));
 		playerCreature.setLevel(cursor.getInt(12));
+		playerCreature.setSeen(cursor.getInt(13));
+		playerCreature.setCaptured(cursor.getInt(14));
 		
-		Log.d("getCreature(" + playerCreature_id + ")", playerCreature.toString());
+		//Log.d("getCreature(" + playerCreature_id + ")", playerCreature.toString());
 		return playerCreature;		
 	}	
 	
@@ -474,7 +513,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 		SQLiteDatabase database = this.getReadableDatabase();
 		
 		String selectQuery = "SELECT * FROM " + TABLE_PLAYER;
-		Log.d("Logging Query for getAllPlayerCreatures", selectQuery);
+		//Log.d("Logging Query for getAllPlayerCreatures", selectQuery);
 		Cursor cursor = database.rawQuery(selectQuery, null);
 		
 		Player pcreature = null;
@@ -494,14 +533,13 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 				pcreature.setMovesPerTurn(cursor.getInt(10));
 				pcreature.setExperience(cursor.getInt(11));
 				pcreature.setLevel(cursor.getInt(12));
-				pcreature.setSeen(cursor.getString(13));
-				pcreature.setSeenAt(cursor.getString(14));
-				pcreature.setCaptured(cursor.getString(15));
+				pcreature.setSeen(cursor.getInt(13));
+				pcreature.setCaptured(cursor.getInt(14));
 				playercreaturesList.add(pcreature);
 				Log.d("ID and NAME", String.valueOf(pcreature.getId()) + " " + pcreature.getName());
 			} while (cursor.moveToNext());
 		}
-		Log.d("getAllCreatures().toString() function", playercreaturesList.toString());
+		//Log.d("getAllCreatures().toString() function", playercreaturesList.toString());
 		database.close();
 		return playercreaturesList;		
 	}
@@ -523,7 +561,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 		List<Player> playerregionCreatures = new ArrayList<Player>();
 		String[] resultColumns = new String[]{PLAYER_ID, COLUMN_NAME, COLUMN_REGION, COLUMN_DISTRICT, COLUMN_TYPE, COLUMN_HEALTH,
 				COLUMN_MAGIC, COLUMN_ATTACK, COLUMN_DEFENSE, COLUMN_SPEED, COLUMN_MPT, COLUMN_EXPERIENCE, COLUMN_LEVEL,
-				COLUMN_SEEN, COLUMN_SEEN_AT, COLUMN_CAPTURED}; 
+				COLUMN_SEEN, COLUMN_CAPTURED}; 
 		String[] condition = {region};
 		SQLiteDatabase database = this.getReadableDatabase();
 		Cursor cursor = database.query(TABLE_PLAYER, resultColumns, COLUMN_REGION + "=" + "?", condition, null, null, null);
@@ -545,13 +583,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 				pcreature.setMovesPerTurn(cursor.getInt(10));
 				pcreature.setExperience(cursor.getInt(11));
 				pcreature.setLevel(cursor.getInt(12));
-				pcreature.setSeen(cursor.getString(13));
-				pcreature.setSeenAt(cursor.getString(14));
-				pcreature.setCaptured(cursor.getString(15));
+				pcreature.setSeen(cursor.getInt(13));
+				pcreature.setCaptured(cursor.getInt(14));
 				playerregionCreatures.add(pcreature);
 			} while (cursor.moveToNext());
 		}
-		Log.d("Logging getAllPlayerCreaturesByRegion()", playerregionCreatures.toString());
+		//Log.d("Logging getAllPlayerCreaturesByRegion()", playerregionCreatures.toString());
 		return playerregionCreatures;
 	}
 	
@@ -581,7 +618,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 		values.put(COLUMN_EXPERIENCE, pcreature.getExperience());		
 		values.put(COLUMN_LEVEL, pcreature.getLevel());			
 		values.put(COLUMN_SEEN, pcreature.getSeen());
-		values.put(COLUMN_SEEN_AT, pcreature.getSeenAt());
 		values.put(COLUMN_CAPTURED, pcreature.getCaptured());
 		
 		long x = database.update(TABLE_PLAYER, 				 
@@ -606,7 +642,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 				PLAYER_ID + " = ?",   									
 				new String[] {String.valueOf(creature_id) });	
 		database.close();
-		Log.d("deletePlayerCreature", String.valueOf(creature_id));
+		//Log.d("deletePlayerCreature", String.valueOf(creature_id));
 	}
 	
 	public int getPlayerCreaturesCount(){
@@ -617,5 +653,136 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 		cursor.close();
 		Log.d("Logging countQuery getPlayerCreaturesCount()", String.valueOf(count));
 		return count;
+	}
+	
+	/**
+	 * 
+	 * Regions Table - 1 columns
+	 * +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+	 * | ID | Name | Point 1 Lat | Point 1 Long | Point 2 Lat | Point 2 Long | Point 3 Lat | Point 3 Long | Point 4 Lat | Point 4 Long |
+	 * +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+	 * |____|______|_____________|______________|_____________|______________|_____________|______________|_____________|______________|   
+	 * |____|______|_____________|______________|_____________|______________|_____________|______________|_____________|______________|   
+	 * |____|______|_____________|______________|_____________|______________|_____________|______________|_____________|______________|   
+	 * |____|______|_____________|______________|_____________|______________|_____________|______________|_____________|______________|   
+	 * 
+	 * All CRUD Operations (Create, Read, Update, Delete)
+	 * 
+	 */
+	public long addRegion(MapZones region){
+		
+		SQLiteDatabase database = this.getWritableDatabase();
+		
+		ContentValues values = new ContentValues();		
+		//Log.d("Putting name into name column: ", creature.getName());
+		values.put(REGION_NAME, region.getZoneName());			
+		values.put(POINT_ONE_LAT, region.getLocationOneLat());			
+		values.put(POINT_ONE_LONG, region.getLocationOneLong());
+		values.put(POINT_TWO_LAT, region.getLocationTwoLat());			
+		values.put(POINT_TWO_LONG, region.getLocationTwoLong());
+		values.put(POINT_THREE_LAT, region.getLocationThreeLat());			
+		values.put(POINT_THREE_LONG, region.getLocationThreeLong());
+		values.put(POINT_FOUR_LAT, region.getLocationFourLat());			
+		values.put(POINT_FOUR_LONG, region.getLocationFourLong());
+		
+		//Log.d("About to insert points for region:", region.getZoneName());
+		long region_id = database.insert(TABLE_REGIONS, null, values);
+		
+		//Log.d("Inserted the row for: ", region.getZoneName());
+		//Log.d("KEY ID for: ", creature.getName() + " is " + creature.getId());
+		
+		return region_id;
+		//Close database connection
+		//DatabaseHelper.database.close();
+	}
+	
+	public MapZones getRegion(int region_id){
+		SQLiteDatabase database = this.getReadableDatabase();	
+		
+		String selectQuery = "SELECT * FROM " + TABLE_REGIONS + " WHERE "
+	            + ZONE_ID + " = " + region_id;
+		Cursor cursor = database.rawQuery(selectQuery, null);
+
+		MapZones region = null; 
+		if (cursor != null)
+			cursor.moveToFirst();
+		
+		region = new MapZones();
+		region.setID(cursor.getInt(0));
+		region.setZoneName(cursor.getString(1));
+		region.setLocationOneLat(cursor.getInt(2));
+		region.setLocationOneLong(cursor.getInt(3));
+		region.setLocationTwoLat(cursor.getInt(4));
+		region.setLocationTwoLong(cursor.getInt(5));
+		region.setLocationThreeLat(cursor.getInt(6));
+		region.setLocationThreeLong(cursor.getInt(7));
+		region.setLocationFourLat(cursor.getInt(8));
+		region.setLocationFourLong(cursor.getInt(9));
+		Log.d("getRegion(" + region_id + ")", region.getZoneName());
+		return region;
+	}
+	public List<MapZones> getAllRegions(){
+		List<MapZones> regionsList = new ArrayList<MapZones>();
+		SQLiteDatabase database = this.getReadableDatabase();
+		
+		String selectQuery = "SELECT * FROM " + TABLE_REGIONS;
+		//Log.d("Logging Query for getAllCreatures", selectQuery);
+		Cursor cursor = database.rawQuery(selectQuery, null);
+		
+		MapZones region = null;
+		if (cursor.moveToFirst()) {
+			do {
+				region = new MapZones();
+				region.setID(cursor.getInt(0));
+				region.setZoneName(cursor.getString(1));
+				region.setLocationOneLat(cursor.getInt(2));
+				region.setLocationOneLong(cursor.getInt(3));
+				region.setLocationTwoLat(cursor.getInt(4));
+				region.setLocationTwoLong(cursor.getInt(5));
+				region.setLocationThreeLat(cursor.getInt(6));
+				region.setLocationThreeLong(cursor.getInt(7));
+				region.setLocationFourLat(cursor.getInt(8));
+				region.setLocationFourLong(cursor.getInt(9));
+				regionsList.add(region);
+				//Log.d("ID and NAME", String.valueOf(creature.getId()) + " " + creature.getName());
+			} while (cursor.moveToNext());
+		}
+		//Log.d("getAllCreatures().toString() function", creaturesList.toString());
+		database.close();
+		return regionsList;		
+	}
+
+	public int getRegionsCount(){
+		String countQuery = " SELECT * FROM " + TABLE_REGIONS;
+		SQLiteDatabase database = this.getReadableDatabase();
+		Cursor cursor = database.rawQuery(countQuery, null);
+		int count = cursor.getCount();
+		cursor.close();
+		Log.d("Logging countQuery getRegionsCount()", String.valueOf(count));
+		return count;
+	}
+	
+	public long updateRegion(MapZones region){
+		
+		SQLiteDatabase database = this.getWritableDatabase();
+		
+		ContentValues values = new ContentValues();		
+		//Log.d("Putting name into name column: ", creature.getName());
+		values.put(REGION_NAME, region.getZoneName());			
+		values.put(POINT_ONE_LAT, region.getLocationOneLat());			
+		values.put(POINT_ONE_LONG, region.getLocationOneLong());
+		values.put(POINT_TWO_LAT, region.getLocationTwoLat());			
+		values.put(POINT_TWO_LONG, region.getLocationTwoLong());
+		values.put(POINT_THREE_LAT, region.getLocationThreeLat());			
+		values.put(POINT_THREE_LONG, region.getLocationThreeLong());
+		values.put(POINT_FOUR_LAT, region.getLocationFourLat());			
+		values.put(POINT_FOUR_LONG, region.getLocationFourLong());
+		
+		long x = database.update(TABLE_REGIONS, 				 
+				values, 										 	
+				ZONE_ID + " = ?", 									
+				new String[] { String.valueOf(region.getID()) });	
+		//database.close();
+		return x;
 	}
 }
